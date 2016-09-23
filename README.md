@@ -2,6 +2,13 @@ This project provides a simple serial interface to SPI LoRa modules, using suita
 
 The Arduino serial can then connect to a PC/Mac/whatever using a suitable TTL serial connection (e.g. Prolific or FTDI USB adapter) or Tablet/Phone/whatever using Bluetooth (e.g. HC-06) Bluetooth serial adapter).
 
+For a Windows PC, this software can be used with my serial gateway for uploading telemetry/SSDV to Habitat.  See:
+
+https://github.com/daveake/LoRaSerialGateway
+
+Hardware
+========
+
 Connections are:
 
 Arduino 0 (Tx) - USB/Bluetooth adapter Rx
@@ -15,7 +22,10 @@ Arduino 11 - LoRa MOSI
 Arduino 12 - LoRa MISO
 Arduino 13 - LoRa CLK
 
-The serial connection is 9600 baud and will send status information and incoming LoRa packets without being polled.  Each of these is of the form
+Serial Protocol
+===============
+
+The serial connection is 57600 baud (**changed from V1.0**) and will send status information and incoming LoRa packets without being polled.  Each of these is of the form
 
 something=value<CR><LF>
 
@@ -23,6 +33,7 @@ The somethings are, currently:
 
 	- CurrentRSSI=<RSSI>
 	- Message=<telemetry>
+	- Hex=<hex packet e.g. SSDV>
 	- FreqErr=<error in kHz>
 	- PacketRSSI=<RSSI>
 	- PacketSNR=<SNR>
@@ -51,3 +62,11 @@ The supported modes are:
 
 Bandwidth value strings can be 7K8, 10K4, 15K6, 20K8, 31K25, 41K7, 62K5, 125K, 250K, 500K
 
+History
+=======
+
+23/09/2016	V1.1	- Added Hex=... message for any packet that is not ASCII telemetry
+					- Added LoRa modes 3-7K8
+					- Increased baud rate to 57,600 (from 9,600) so handle high LoRa data rates esp. with SSDV
+					
+30/06/2016	V1.0	- First version

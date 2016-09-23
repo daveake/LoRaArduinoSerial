@@ -52,8 +52,8 @@ int LowDataRateOptimize;
 #define REG_PAYLOAD_LENGTH          0x22
 #define REG_IRQ_FLAGS_MASK          0x11
 #define REG_HOP_PERIOD              0x24
-#define REG_FREQ_ERROR        0x28
-#define REG_DETECT_OPT        0x31
+#define REG_FREQ_ERROR              0x28
+#define REG_DETECT_OPT              0x31
 #define REG_DETECTION_THRESHOLD     0x37
 
 // MODES
@@ -117,13 +117,50 @@ char Hex[] = "0123456789ABCDEF";
 
 void SetParametersFromLoRaMode(int LoRaMode)
 {
-  if (LoRaMode == 2)
+  LowDataRateOptimize = 0;
+  
+  if (LoRaMode == 7)
+  {
+    ImplicitOrExplicit = EXPLICIT_MODE;
+    ErrorCoding = ERROR_CODING_4_5;
+    Bandwidth = BANDWIDTH_20K8;
+    SpreadingFactor = SPREADING_7;
+  }
+  else if (LoRaMode == 6)
+  {
+    ImplicitOrExplicit = IMPLICIT_MODE;
+    ErrorCoding = ERROR_CODING_4_5;
+    Bandwidth = BANDWIDTH_41K7;
+    SpreadingFactor = SPREADING_6;
+  }
+  else if (LoRaMode == 5)
+  {
+    ImplicitOrExplicit = EXPLICIT_MODE;
+    ErrorCoding = ERROR_CODING_4_8;
+    Bandwidth = BANDWIDTH_41K7;
+    SpreadingFactor = SPREADING_11;
+  }
+  else if (LoRaMode == 4)
+  {
+    ImplicitOrExplicit = IMPLICIT_MODE;
+    ErrorCoding = ERROR_CODING_4_5;
+    Bandwidth = BANDWIDTH_250K;
+    SpreadingFactor = SPREADING_6;
+  }
+  else if (LoRaMode == 3)
+  {
+    ImplicitOrExplicit = EXPLICIT_MODE;
+    ErrorCoding = ERROR_CODING_4_6;
+    Bandwidth = BANDWIDTH_250K;
+    SpreadingFactor = SPREADING_7;
+  }
+  else if (LoRaMode == 2)
   {
     ImplicitOrExplicit = EXPLICIT_MODE;
     ErrorCoding = ERROR_CODING_4_8;
     Bandwidth = BANDWIDTH_62K5;
     SpreadingFactor = SPREADING_8;
-    LowDataRateOptimize = 0;
+
   }
   else if (LoRaMode == 1)
   {
@@ -131,7 +168,7 @@ void SetParametersFromLoRaMode(int LoRaMode)
     ErrorCoding = ERROR_CODING_4_5;
     Bandwidth = BANDWIDTH_20K8;
     SpreadingFactor = SPREADING_6;
-    LowDataRateOptimize = 0;
+
   }
   else if (LoRaMode == 0)
   {
@@ -147,10 +184,10 @@ void SetParametersFromLoRaMode(int LoRaMode)
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(57600);
 
   Serial.println("");
-  Serial.println("LoRa USB Receiver V1.0");
+  Serial.println("LoRa USB Receiver V1.1");
   Serial.println("");
 
   SetParametersFromLoRaMode(0);
@@ -223,7 +260,7 @@ double FrequencyError(void)
   return -T;
 } 
 
-int receiveMessage(char *message)
+int receiveMessage(unsigned char *message)
 {
   int i, Bytes, currentAddr;
 
@@ -302,7 +339,7 @@ void SetMode(char *Line)
 
   Mode = atoi(Line);
 
-  if ((Mode >= 0) && (Mode <= 2))
+  if ((Mode >= 0) && (Mode <= 7))
   {
     ReplyOK();
 
@@ -529,8 +566,8 @@ void CheckRx()
 {
   if (digitalRead(dio0))
   {
-    char Message[256];
-    int Bytes, SNR, RSSI;
+    unsigned char Message[256];
+    int Bytes, SNR, RSSI, i;
     long Altitude;
     
     Bytes = receiveMessage(Message);
@@ -547,7 +584,7 @@ void CheckRx()
     Serial.print("PacketRSSI="); Serial.println(RSSI);
     Serial.print("PacketSNR="); Serial.println(SNR);
     
-    
+
     // Serial.print("Packet size = "); Serial.println(Bytes);
 
     // Telemetry='$$LORA1,108,20:30:39,51.95027,-2.54445,00141,0,0,11*9B74
@@ -555,7 +592,20 @@ void CheckRx()
     if (Message[0] == '$')
     {
       Serial.print("Message=");
-      Serial.println(Message);			
+      Serial.println((char *)Message);			
+    }
+    else
+    {
+      Serial.print("Hex=");
+      for (i=0; i<Bytes; i++)
+      {
+        if (Message[i] < 0x10)
+        {
+          Serial.print("0");
+        } 
+        Serial.print(Message[i], HEX);
+      }
+      Serial.println();
     }
   }
 }
