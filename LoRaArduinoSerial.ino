@@ -592,7 +592,25 @@ void CheckRx()
     if (Message[0] == '$')
     {
       Serial.print("Message=");
-      Serial.println((char *)Message);			
+      Serial.println((char *)Message);
+    }
+    else if (Message[0] == '%')
+    {
+      char *ptr, *ptr2;
+
+      Message[0] = '$';
+      
+      ptr = (char *)Message;
+      do
+      {
+        if ((ptr2 = strchr(ptr, '\n')) != NULL)
+        {
+          *ptr2 = '\0';
+          Serial.print("Message=");
+          Serial.println(ptr);
+          ptr = ptr2 + 1;
+        }
+      } while (ptr2 != NULL);
     }
     else
     {
