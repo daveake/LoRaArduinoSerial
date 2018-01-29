@@ -14,8 +14,8 @@ Connections are:
 Arduino 0 (Tx) - USB/Bluetooth adapter Rx
 Arduino 1 (Rx) - USB/Bluetooth adapter Tx
 
-Arduino  2 - LoRa DIO5
-Arduino  3 - LoRa DIO0
+Arduino  8 - LoRa DIO0
+Arduino  9 - LoRa DIO5
 
 Arduino 10 - LoRa NSS
 Arduino 11 - LoRa MOSI

@@ -9,8 +9,8 @@
 |                                                     |
 |               Arduino Rx - Bluetooth Tx             |
 |               Arduino Tx - Bluetooth Rx             |
-|               Arduino  2 - RFM DIO5                 |
-|               Arduino  3 - RFM DIO0                 |
+|               Arduino  8 - RFM DIO0                 |
+|               Arduino  9 - RFM DIO5                 |
 |               Arduino 10 - RFM NSS                  |
 |               Arduino 11 - RFM MOSI                 |
 |               Arduino 12 - RFM MISO                 |
