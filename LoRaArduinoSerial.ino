@@ -22,11 +22,11 @@
 int _slaveSelectPin = 10; 
 String content = "";
 char character;
-int dio0 = 3;
-int dio5 = 2;
+int dio0 = 8;
+int dio5 = 9;
 byte currentMode = 0x81;
 unsigned long UpdateClientAt=0;
-double Frequency=434.250;
+double Frequency=434.448;
 int ImplicitOrExplicit;
 int ErrorCoding;
 int Bandwidth;
@@ -187,10 +187,10 @@ void setup()
   Serial.begin(57600);
 
   Serial.println("");
-  Serial.println("LoRa USB Receiver V1.1");
+  Serial.println("LoRa USB Receiver V1.2");
   Serial.println("");
 
-  SetParametersFromLoRaMode(0);
+  SetParametersFromLoRaMode(1);
 
   setupRFM98();
 }
@@ -209,8 +209,15 @@ void UpdateClient(void)
   if (millis() >= UpdateClientAt)
   {
     int CurrentRSSI;
-    
-    CurrentRSSI = readRegister(REG_RSSI_CURRENT) - 137;
+
+    if (Frequency > 525)
+    {
+      CurrentRSSI = readRegister(REG_RSSI_CURRENT) - 157;
+    }
+    else
+    {
+      CurrentRSSI = readRegister(REG_RSSI_CURRENT) - 164;
+    }
     
     Serial.print("CurrentRSSI=");
     Serial.println(CurrentRSSI);
@@ -576,11 +583,21 @@ void CheckRx()
 
     SNR = readRegister(REG_PACKET_SNR);
     SNR /= 4;
-    RSSI = readRegister(REG_PACKET_RSSI) - 157;
+    
+    if (Frequency > 525)
+    {
+      RSSI = readRegister(REG_PACKET_RSSI) - 157;
+    }
+    else
+    {
+      RSSI = readRegister(REG_PACKET_RSSI) - 164;
+    }
+    
     if (SNR < 0)
     {
       RSSI += SNR;
     }
+    
     Serial.print("PacketRSSI="); Serial.println(RSSI);
     Serial.print("PacketSNR="); Serial.println(SNR);
     
@@ -663,6 +680,7 @@ void setMode(byte newMode)
     {
       // 
     } 
+    delay(10);
   }
    
   return;
