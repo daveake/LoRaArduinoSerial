@@ -22,8 +22,8 @@
 int _slaveSelectPin = 10; 
 String content = "";
 char character;
-int dio0 = 8;
-int dio5 = 9;
+int dio0 = 3;
+// int dio5 = 9;
 byte currentMode = 0x81;
 unsigned long UpdateClientAt=0;
 double Frequency=434.448;
@@ -184,7 +184,7 @@ void SetParametersFromLoRaMode(int LoRaMode)
 
 void setup()
 {
-  Serial.begin(57600);
+  Serial.begin(9600); //   57600);
 
   Serial.println("");
   Serial.println("LoRa USB Receiver V1.2");
@@ -269,9 +269,11 @@ double FrequencyError(void)
 
 int receiveMessage(unsigned char *message)
 {
-  int i, Bytes, currentAddr;
+  int i, Bytes, x, currentAddr;
 
-  int x = readRegister(REG_IRQ_FLAGS);
+  Bytes = 0;
+
+  x = readRegister(REG_IRQ_FLAGS);
   // printf("Message status = %02Xh\n", x);
   
   // clear the rxDone flag
@@ -676,10 +678,10 @@ void setMode(byte newMode)
   } 
   
   if(newMode != RF96_MODE_SLEEP){
-    while(digitalRead(dio5) == 0)
-    {
+    //while(digitalRead(dio5) == 0)
+    //{
       // 
-    } 
+    //} 
     delay(10);
   }
    
@@ -779,7 +781,7 @@ void setupRFM98(void)
   // initialize the pins
   pinMode( _slaveSelectPin, OUTPUT);
   pinMode(dio0, INPUT);
-  pinMode(dio5, INPUT);
+  // pinMode(dio5, INPUT);
 
   SPI.begin();
   
@@ -787,5 +789,3 @@ void setupRFM98(void)
   
   Serial.println("Setup Complete");
 }
-
-
