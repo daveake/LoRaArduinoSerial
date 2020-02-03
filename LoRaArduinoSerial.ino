@@ -22,7 +22,7 @@
 int _slaveSelectPin = 10; 
 String content = "";
 char character;
-int dio0 = 3;
+int dio0 = 8;
 // int dio5 = 9;
 byte currentMode = 0x81;
 unsigned long UpdateClientAt=0;
@@ -184,7 +184,7 @@ void SetParametersFromLoRaMode(int LoRaMode)
 
 void setup()
 {
-  Serial.begin(9600); //   57600);
+  Serial.begin(57600);
 
   Serial.println("");
   Serial.println("LoRa USB Receiver V1.2");
@@ -332,7 +332,7 @@ void SetFrequency(char *Line)
     Frequency = Freq;
     
     Serial.print("Frequency=");
-    Serial.println(Frequency);
+    Serial.println(Frequency, 3);
 
     startReceiving();
   }
@@ -608,7 +608,11 @@ void CheckRx()
 
     // Telemetry='$$LORA1,108,20:30:39,51.95027,-2.54445,00141,0,0,11*9B74
 
-    if (Message[0] == '$')
+    if (Bytes == 0)
+    {
+      // CRC fail do nothing  
+    }
+    else if (Message[0] == '$')
     {
       Serial.print("Message=");
       Serial.println((char *)Message);
