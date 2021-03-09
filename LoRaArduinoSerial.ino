@@ -1,4 +1,3 @@
-// LoRa receiver sending packets to serial port
 // Intended for use with a bluetooth module for comms to an Android phone, but usable for anything with a serial connection
 
 #include <string.h>
@@ -6,35 +5,39 @@
 #include <SPI.h>
 
 /*---------------------------------------------------*\
-|                                                     |
-|               Arduino Rx - Bluetooth Tx             |
-|               Arduino Tx - Bluetooth Rx             |
-|               Arduino  8 - RFM DIO0                 |
-|               Arduino  9 - RFM DIO5                 |
-|               Arduino 10 - RFM NSS                  |
-|               Arduino 11 - RFM MOSI                 |
-|               Arduino 12 - RFM MISO                 |
-|               Arduino 13 - RFM CLK                  |
-|                                                     |
-\*---------------------------------------------------*/
+  |                                                     |
+  |               Arduino Rx - Bluetooth Tx             |
+  |               Arduino Tx - Bluetooth Rx             |
+  |               Arduino  8 - RFM DIO0                 |
+  |               Arduino 10 - RFM NSS                  |
+  |               Arduino 11 - RFM MOSI                 |
+  |               Arduino 12 - RFM MISO                 |
+  |               Arduino 13 - RFM CLK                  |
+  |                                                     |
+  \*---------------------------------------------------*/
 
-// RFM98
-int _slaveSelectPin = 10; 
+#define DEVICE "AVR LoRa USB Receiver"
+#define VERSION "2.01"
+
+// LoRa Pins
+
+int LORA_DIO0 = 7;  // 7; //8;
+int _slaveSelectPin = 8;  // 8;  // 10;
+
 String content = "";
 char character;
-int dio0 = 8;
-// int dio5 = 9;
 byte currentMode = 0x81;
-unsigned long UpdateClientAt=0;
-double Frequency=434.448;
+unsigned long UpdateClientAt = 0;
+double Frequency = 434.448;
 int ImplicitOrExplicit;
 int ErrorCoding;
 int Bandwidth;
 int SpreadingFactor;
 int LowDataRateOptimize;
+char Line[200];
 
 #define REG_FIFO                    0x00
-#define REG_FIFO_ADDR_PTR           0x0D 
+#define REG_FIFO_ADDR_PTR           0x0D
 #define REG_FIFO_TX_BASE_AD         0x0E
 #define REG_FIFO_RX_BASE_AD         0x0F
 #define REG_RX_NB_BYTES             0x13
@@ -57,8 +60,8 @@ int LowDataRateOptimize;
 #define REG_DETECTION_THRESHOLD     0x37
 
 // MODES
-// MODES
 #define RF96_MODE_RX_CONTINUOUS     0x85
+#define RF96_MODE_TX                0x83
 #define RF96_MODE_SLEEP             0x80
 #define RF96_MODE_STANDBY           0x81
 
@@ -114,11 +117,12 @@ int LowDataRateOptimize;
 
 
 char Hex[] = "0123456789ABCDEF";
+int Sending = 0;
 
 void SetParametersFromLoRaMode(int LoRaMode)
 {
   LowDataRateOptimize = 0;
-  
+
   if (LoRaMode == 7)
   {
     ImplicitOrExplicit = EXPLICIT_MODE;
@@ -180,6 +184,7 @@ void SetParametersFromLoRaMode(int LoRaMode)
   }
 }
 
+
 // initialize the library with the numbers of the interface pins
 
 void setup()
@@ -187,7 +192,9 @@ void setup()
   Serial.begin(57600);
 
   Serial.println("");
-  Serial.println("LoRa USB Receiver V1.2");
+  Serial.print(DEVICE);
+  Serial.print(' ');
+  Serial.println(VERSION);
   Serial.println("");
 
   SetParametersFromLoRaMode(1);
@@ -198,9 +205,16 @@ void setup()
 void loop()
 {
   CheckPC();
-  
-  CheckRx();
-  
+
+  if (Sending)
+  {
+    CheckTx();
+  }
+  else
+  {
+    CheckRx();
+  }
+
   UpdateClient();
 }
 
@@ -218,10 +232,10 @@ void UpdateClient(void)
     {
       CurrentRSSI = readRegister(REG_RSSI_CURRENT) - 164;
     }
-    
+
     Serial.print("CurrentRSSI=");
     Serial.println(CurrentRSSI);
-    
+
     UpdateClientAt = millis() + 1000;
   }
 }
@@ -231,15 +245,15 @@ double FrequencyReference(void)
   switch (Bandwidth)
   {
     case  BANDWIDTH_7K8:  return 7800;
-    case  BANDWIDTH_10K4:   return 10400; 
-    case  BANDWIDTH_15K6:   return 15600; 
-    case  BANDWIDTH_20K8:   return 20800; 
-    case  BANDWIDTH_31K25:  return 31250; 
-    case  BANDWIDTH_41K7:   return 41700; 
-    case  BANDWIDTH_62K5:   return 62500; 
-    case  BANDWIDTH_125K:   return 125000; 
-    case  BANDWIDTH_250K:   return 250000; 
-    case  BANDWIDTH_500K:   return 500000; 
+    case  BANDWIDTH_10K4:   return 10400;
+    case  BANDWIDTH_15K6:   return 15600;
+    case  BANDWIDTH_20K8:   return 20800;
+    case  BANDWIDTH_31K25:  return 31250;
+    case  BANDWIDTH_41K7:   return 41700;
+    case  BANDWIDTH_62K5:   return 62500;
+    case  BANDWIDTH_125K:   return 125000;
+    case  BANDWIDTH_250K:   return 250000;
+    case  BANDWIDTH_500K:   return 500000;
   }
 }
 
@@ -248,13 +262,13 @@ double FrequencyError(void)
 {
   int32_t Temp;
   double T;
-  
+
   Temp = (int32_t)readRegister(REG_FREQ_ERROR) & 7;
   Temp <<= 8L;
-  Temp += (int32_t)readRegister(REG_FREQ_ERROR+1);
+  Temp += (int32_t)readRegister(REG_FREQ_ERROR + 1);
   Temp <<= 8L;
-  Temp += (int32_t)readRegister(REG_FREQ_ERROR+2);
-  
+  Temp += (int32_t)readRegister(REG_FREQ_ERROR + 2);
+
   if (readRegister(REG_FREQ_ERROR) & 8)
   {
     Temp = Temp - 524288;
@@ -265,7 +279,7 @@ double FrequencyError(void)
   T *= (FrequencyReference() / 500000.0);
 
   return -T;
-} 
+}
 
 int receiveMessage(unsigned char *message)
 {
@@ -275,37 +289,40 @@ int receiveMessage(unsigned char *message)
 
   x = readRegister(REG_IRQ_FLAGS);
   // printf("Message status = %02Xh\n", x);
-  
+
   // clear the rxDone flag
-  // writeRegister(REG_IRQ_FLAGS, 0x40); 
-  writeRegister(REG_IRQ_FLAGS, 0xFF); 
-   
+  // writeRegister(REG_IRQ_FLAGS, 0x40);
+  writeRegister(REG_IRQ_FLAGS, 0xFF);
+
   // check for payload crc issues (0x20 is the bit we are looking for
-  if((x & 0x20) == 0x20)
+  if ((x & 0x20) == 0x20)
   {
-    // printf("CRC Failure %02Xh!!\n", x);
+    Serial.println("CRC=Fail");
+
     // reset the crc flags
-    writeRegister(REG_IRQ_FLAGS, 0x20); 
+    writeRegister(REG_IRQ_FLAGS, 0x20);
   }
   else
   {
+    Serial.println("CRC=OK");
     currentAddr = readRegister(REG_FIFO_RX_CURRENT_ADDR);
     Bytes = readRegister(REG_RX_NB_BYTES);
-    // printf ("%d bytes in packet\n", Bytes);
+//    Serial.print("Received ");
+//    Serial.print(Bytes);
+//    Serial.println(" bytes");
 
-    // printf("RSSI = %d\n", readRegister(REG_RSSI) - 137);
-	
-    writeRegister(REG_FIFO_ADDR_PTR, currentAddr);   
+    writeRegister(REG_FIFO_ADDR_PTR, currentAddr);
+    
     // now loop over the fifo getting the data
-    for(i = 0; i < Bytes; i++)
+    for (i = 0; i < Bytes; i++)
     {
       message[i] = (unsigned char)readRegister(REG_FIFO);
     }
     message[Bytes] = '\0';
 
-    // writeRegister(REG_FIFO_ADDR_PTR, 0);  // currentAddr);   
-  } 
-  
+    // writeRegister(REG_FIFO_ADDR_PTR, 0);  // currentAddr);
+  }
+
   return Bytes;
 }
 
@@ -330,7 +347,7 @@ void SetFrequency(char *Line)
     ReplyOK();
 
     Frequency = Freq;
-    
+
     Serial.print("Frequency=");
     Serial.println(Frequency, 3);
 
@@ -353,7 +370,7 @@ void SetMode(char *Line)
     ReplyOK();
 
     SetParametersFromLoRaMode(Mode);
-    
+
     Serial.print("Mode=");
     Serial.println(Mode);
 
@@ -443,7 +460,7 @@ void SetErrorCoding(char *Line)
   if ((Coding >= 5) && (Coding <= 8))
   {
     ReplyOK();
-    ErrorCoding = (Coding-4) << 1;
+    ErrorCoding = (Coding - 4) << 1;
     startReceiving();
   }
   else
@@ -477,9 +494,23 @@ void SetImplicit(char *Line)
   Implicit = atoi(Line);
 
   ReplyOK();
-  
+
   ImplicitOrExplicit = Implicit ? IMPLICIT_MODE : EXPLICIT_MODE;
   startReceiving();
+}
+
+void SendVersion(void)
+{
+  ReplyOK();
+  Serial.print("Version=");
+  Serial.println(VERSION);
+}
+
+void SendDevice(void)
+{
+  ReplyOK();
+  Serial.print("Device=");
+  Serial.println(DEVICE);
 }
 
 void SetLowOpt(char *Line)
@@ -489,10 +520,53 @@ void SetLowOpt(char *Line)
   LowOpt = atoi(Line);
 
   ReplyOK();
-  
+
   ImplicitOrExplicit = LowOpt ? 0x08 : 0;
-  
+
   startReceiving();
+}
+
+void TransmitMessage(char *Line)
+{
+  ReplyOK();
+
+  SendLoRaPacket(Line);
+}
+
+void SendLoRaPacket(char *buffer)
+{
+  int i, Length;
+
+  Length = strlen(buffer) + 1;
+
+  // Serial.print("Sending "); Serial.print(Length);Serial.println(" bytes");
+  Serial.println("Tx=ON");
+
+  SetLoRaMode(RF96_MODE_STANDBY);
+
+  writeRegister(REG_DIO_MAPPING_1, 0x40);    // 01 00 00 00 maps DIO0 to TxDone
+  writeRegister(REG_FIFO_TX_BASE_AD, 0x00);  // Update the address ptr to the current tx base address
+  writeRegister(REG_FIFO_ADDR_PTR, 0x00);
+  if (ImplicitOrExplicit == EXPLICIT_MODE)
+  {
+    writeRegister(REG_PAYLOAD_LENGTH, Length);
+  }
+
+  select();
+  // tell SPI which address you want to write to
+  SPI.transfer(REG_FIFO | 0x80);
+
+  // loop over the payload and put it on the buffer
+  for (i = 0; i < Length; i++)
+  {
+    SPI.transfer(buffer[i]);
+  }
+  unselect();
+
+  // go into transmit mode
+  SetLoRaMode(RF96_MODE_TX);
+
+  Sending = 1;
 }
 
 void ProcessCommand(char *Line)
@@ -501,7 +575,7 @@ void ProcessCommand(char *Line)
 
   Command = Line[1];
   Line += 2;
-       
+
   if (Command == 'F')
   {
     SetFrequency(Line);
@@ -530,6 +604,18 @@ void ProcessCommand(char *Line)
   {
     SetLowOpt(Line);
   }
+  else if (Command == 'D')
+  {
+    SendDevice();
+  }
+  else if (Command == 'V')
+  {
+    SendVersion();
+  }
+  else if (Command == 'T')
+  {
+    TransmitMessage(Line);
+  }
   else
   {
     ReplyBad();
@@ -538,20 +624,19 @@ void ProcessCommand(char *Line)
 
 void CheckPC()
 {
-  static char Line[32];
-  static int Length=0;
+  static int Length = 0;
   char Character;
 
   while (Serial.available())
-  { 
+  {
     Character = Serial.read();
-    
+
     if (Character == '~')
     {
       Line[0] = Character;
       Length = 1;
     }
-    else if (Length >= sizeof(Line))
+    else if (Length >= (sizeof(Line)-1))
     {
       Length = 0;
     }
@@ -573,19 +658,19 @@ void CheckPC()
 
 void CheckRx()
 {
-  if (digitalRead(dio0))
+  if (digitalRead(LORA_DIO0))
   {
     unsigned char Message[256];
     int Bytes, SNR, RSSI, i;
     long Altitude;
-    
+
     Bytes = receiveMessage(Message);
-    
-    Serial.print("FreqErr="); Serial.println(FrequencyError()/1000.0);
+
+    Serial.print("FreqErr="); Serial.println(FrequencyError() / 1000.0);
 
     SNR = readRegister(REG_PACKET_SNR);
     SNR /= 4;
-    
+
     if (Frequency > 525)
     {
       RSSI = readRegister(REG_PACKET_RSSI) - 157;
@@ -594,25 +679,26 @@ void CheckRx()
     {
       RSSI = readRegister(REG_PACKET_RSSI) - 164;
     }
-    
+
     if (SNR < 0)
     {
       RSSI += SNR;
     }
-    
+
     Serial.print("PacketRSSI="); Serial.println(RSSI);
     Serial.print("PacketSNR="); Serial.println(SNR);
-    
 
     // Serial.print("Packet size = "); Serial.println(Bytes);
+    // Serial.println((char *)Message);
 
     // Telemetry='$$LORA1,108,20:30:39,51.95027,-2.54445,00141,0,0,11*9B74
 
     if (Bytes == 0)
     {
-      // CRC fail do nothing  
+      // CRC fail do nothing
+      Serial.println("BAD CRC");
     }
-    else if (Message[0] == '$')
+    else if ((Message[0] == '$') || (Message[0] == '%'))
     {
       Serial.print("Message=");
       Serial.println((char *)Message);
@@ -622,7 +708,7 @@ void CheckRx()
       char *ptr, *ptr2;
 
       Message[0] = '$';
-      
+
       ptr = (char *)Message;
       do
       {
@@ -638,12 +724,12 @@ void CheckRx()
     else
     {
       Serial.print("Hex=");
-      for (i=0; i<Bytes; i++)
+      for (i = 0; i < Bytes; i++)
       {
         if (Message[i] < 0x10)
         {
           Serial.print("0");
-        } 
+        }
         Serial.print(Message[i], HEX);
       }
       Serial.println();
@@ -655,40 +741,44 @@ void CheckRx()
 /////////////////////////////////////
 //    Method:   Change the mode
 //////////////////////////////////////
-void setMode(byte newMode)
+void SetLoRaMode(byte newMode)
 {
-  if(newMode == currentMode)
-    return;  
-  
-  switch (newMode) 
+  if (newMode == currentMode)
+    return;
+
+  switch (newMode)
   {
+    case RF96_MODE_TX:
+      writeRegister(REG_LNA, LNA_OFF_GAIN);  // TURN LNA OFF FOR TRANSMITT
+      writeRegister(REG_PA_CONFIG, PA_MAX_UK);
+      writeRegister(REG_OPMODE, newMode);
+      currentMode = newMode;
+      break;
+
     case RF96_MODE_RX_CONTINUOUS:
       writeRegister(REG_PA_CONFIG, PA_OFF_BOOST);  // TURN PA OFF FOR RECIEVE??
       writeRegister(REG_LNA, LNA_MAX_GAIN);  // LNA_MAX_GAIN);  // MAX GAIN FOR RECIEVE
       writeRegister(REG_OPMODE, newMode);
-      currentMode = newMode; 
+      currentMode = newMode;
       break;
-      
+
       break;
     case RF96_MODE_SLEEP:
       writeRegister(REG_OPMODE, newMode);
-      currentMode = newMode; 
+      currentMode = newMode;
       break;
     case RF96_MODE_STANDBY:
       writeRegister(REG_OPMODE, newMode);
-      currentMode = newMode; 
+      currentMode = newMode;
       break;
     default: return;
-  } 
-  
-  if(newMode != RF96_MODE_SLEEP){
-    //while(digitalRead(dio5) == 0)
-    //{
-      // 
-    //} 
+  }
+
+  if (newMode != RF96_MODE_SLEEP)
+  {
     delay(10);
   }
-   
+
   return;
 }
 
@@ -721,7 +811,7 @@ void writeRegister(byte addr, byte value)
 /////////////////////////////////////
 //    Method:   Select Transceiver
 //////////////////////////////////////
-void select() 
+void select()
 {
   digitalWrite(_slaveSelectPin, LOW);
 }
@@ -729,7 +819,7 @@ void select()
 /////////////////////////////////////
 //    Method:   UNSelect Transceiver
 //////////////////////////////////////
-void unselect() 
+void unselect()
 {
   digitalWrite(_slaveSelectPin, HIGH);
 }
@@ -738,12 +828,12 @@ void SetLoRaFrequency()
 {
   unsigned long FrequencyValue;
   double Temp;
-  
+
   Temp = Frequency * 7110656 / 434;
   FrequencyValue = (unsigned long)(Temp);
 
-  Serial.print("FrequencyValue is ");
-  Serial.println(FrequencyValue);
+  //  Serial.print("FrequencyValue is ");
+  //  Serial.println(FrequencyValue);
 
   writeRegister(0x06, (FrequencyValue >> 16) & 0xFF);    // Set frequency
   writeRegister(0x07, (FrequencyValue >> 8) & 0xFF);
@@ -762,34 +852,47 @@ void SetLoRaParameters()
 
 void startReceiving()
 {
-  setMode(RF96_MODE_SLEEP);
-  writeRegister(REG_OPMODE,0x80);  
-  setMode(RF96_MODE_SLEEP);
+  SetLoRaMode(RF96_MODE_SLEEP);
+  writeRegister(REG_OPMODE, 0x80);
+  SetLoRaMode(RF96_MODE_SLEEP);
 
   SetLoRaFrequency();
-  
+
   SetLoRaParameters();
-  
+
   writeRegister(REG_PAYLOAD_LENGTH, 255);
   writeRegister(REG_RX_NB_BYTES, 255);
-  
+
   writeRegister(REG_FIFO_RX_BASE_AD, 0);
   writeRegister(REG_FIFO_ADDR_PTR, 0);
-  
+
   // Setup Receive Continous Mode
-  setMode(RF96_MODE_RX_CONTINUOUS);
+  SetLoRaMode(RF96_MODE_RX_CONTINUOUS);
 }
 
 void setupRFM98(void)
 {
   // initialize the pins
   pinMode( _slaveSelectPin, OUTPUT);
-  pinMode(dio0, INPUT);
-  // pinMode(dio5, INPUT);
+  pinMode(LORA_DIO0, INPUT);
 
   SPI.begin();
-  
+
   startReceiving();
-  
-  Serial.println("Setup Complete");
+
+  // Serial.println("Setup Complete");
+}
+
+void CheckTx()
+{
+  if (digitalRead(LORA_DIO0))
+  {
+    Sending = 0;
+
+    Serial.println("Tx=OFF");
+
+    setupRFM98();
+
+    startReceiving();
+  }
 }

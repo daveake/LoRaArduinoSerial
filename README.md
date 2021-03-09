@@ -65,6 +65,10 @@ Bandwidth value strings can be 7K8, 10K4, 15K6, 20K8, 31K25, 41K7, 62K5, 125K, 2
 History
 =======
 
+08/03/2021	V2.01	- Larger receive buffer to allow for longer transmissions
+
+			V2.0	- Added device, version and transmit commands
+
 23/09/2016	V1.1	- Added Hex=... message for any packet that is not ASCII telemetry
 					- Added LoRa modes 3-7K8
 					- Increased baud rate to 57,600 (from 9,600) so handle high LoRa data rates esp. with SSDV
