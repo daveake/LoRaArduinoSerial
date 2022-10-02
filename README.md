@@ -65,6 +65,8 @@ Bandwidth value strings can be 7K8, 10K4, 15K6, 20K8, 31K25, 41K7, 62K5, 125K, 2
 History
 =======
 
+30/09/2022	V2.02	- Bug fix in SNR calculation
+
 08/03/2021	V2.01	- Larger receive buffer to allow for longer transmissions
 
 			V2.0	- Added device, version and transmit commands

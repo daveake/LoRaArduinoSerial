@@ -17,12 +17,12 @@
   \*---------------------------------------------------*/
 
 #define DEVICE "AVR LoRa USB Receiver"
-#define VERSION "2.01"
+#define VERSION "2.02"
 
 // LoRa Pins
 
-int LORA_DIO0 = 7;  // 7; //8;
-int _slaveSelectPin = 8;  // 8;  // 10;
+int LORA_DIO0 = 8;  // 7; //8;
+int _slaveSelectPin = 10; // 9;  // 8;  // 10;
 
 String content = "";
 char character;
@@ -662,14 +662,16 @@ void CheckRx()
   {
     unsigned char Message[256];
     int Bytes, SNR, RSSI, i;
+    char RawSNR;
     long Altitude;
 
     Bytes = receiveMessage(Message);
 
     Serial.print("FreqErr="); Serial.println(FrequencyError() / 1000.0);
 
-    SNR = readRegister(REG_PACKET_SNR);
-    SNR /= 4;
+    RawSNR = readRegister(REG_PACKET_SNR);
+    RawSNR /= 4;
+    SNR = RawSNR;   // 8-bit --> 16-bit
 
     if (Frequency > 525)
     {
